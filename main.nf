@@ -6,6 +6,9 @@ include { fastp }          from './modules/snippy.nf'
 include { snippy }         from './modules/snippy.nf'
 include { count_variants } from './modules/snippy.nf'
 include { qualimap_bamqc } from './modules/snippy.nf'
+include { samtools_mpileup } from './modules/snippy.nf'
+include { plot_coverage } from './modules/snippy.nf'
+include { convert_gb_to_fa } from './modules/snippy.nf'
 
 workflow {
   ch_ref = Channel.fromPath( "${params.ref}", type: 'file')
@@ -21,4 +24,13 @@ workflow {
     snippy(fastp.out.reads.combine(ch_ref))
     qualimap_bamqc(snippy.out.alignment)
     count_variants(snippy.out.variants_csv.combine(ch_ref))
+
+    if (file(params.ref).name =~ /.+\.[Gg]b.*/){
+      ch_ref_fa = convert_gb_to_fa(ch_ref)
+    }else {
+      ch_ref_fa = ch_ref
+    }
+
+    samtools_mpileup(snippy.out.alignment.combine(ch_ref_fa))
+    plot_coverage(samtools_mpileup.out.depths.combine(ch_ref_fa))
 }
