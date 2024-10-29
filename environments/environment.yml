@@ -2,10 +2,13 @@ name: snippy-nf
 channels:
   - conda-forge
   - bioconda
-  - defaults
 dependencies:
   - python=3
   - csvkit=1.0.5
   - snippy=4.6.0
   - fastp=0.20.1
   - qualimap=2.2.2d
+  - pandas=2.2.3
+  - seaborn=0.13.2
+  - matplotlib=3.9.1
+  - biopython=1.84
