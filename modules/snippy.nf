@@ -44,7 +44,7 @@ process snippy {
     
     script:
     ram = task.memory ? ram = "--ram ${task.memory}" : "" 
-    report = params.report ? "--report" : ""
+    report = params.skip_report ? "" : "--report"
     """
     mkdir tmp
 
