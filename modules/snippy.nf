@@ -11,9 +11,15 @@ process fastp {
   tuple val(sample_id), path("${sample_id}_fastp.json"),                                                    emit: fastp_json
   tuple val(sample_id), path("${sample_id}_fastp.csv"),                                                     emit: fastp_csv
   tuple val(sample_id), path("${sample_id}_trimmed_R1.fastq.gz"), path("${sample_id}_trimmed_R2.fastq.gz"), emit: reads
-
+  tuple val(sample_id), path("${sample_id}_fastp_provenance.yml"), emit: provenance
+  
   script:
   """
+  printf -- "- process_name: fastp\\n"  >> ${sample_id}_fastp_provenance.yml
+  printf -- "  tools:\\n"               >> ${sample_id}_fastp_provenance.yml
+  printf -- "    - tool_name: fastp\\n" >> ${sample_id}_fastp_provenance.yml
+  printf -- "      tool_version: \$(fastp --version 2>&1 | cut -d ' ' -f 2)\\n" >> ${sample_id}_fastp_provenance.yml
+  
   fastp \
     -i ${reads_r1} \
     -I ${reads_r2} \
@@ -41,11 +47,33 @@ process snippy {
     tuple val(sample_id), path("${sample_id}/reference", type: 'dir'),                                      emit: snippy_ref
     tuple val(sample_id), path("${sample_id}/${sample_id}.bam"), path("${sample_id}/${sample_id}.bam.bai"), emit: alignment
     tuple val(sample_id), path("${sample_id}/${sample_id}.csv"),                                            emit: variants_csv
+    tuple val(sample_id), path("${sample_id}_snippy_provenance.yml"), emit: provenance
     
     script:
     ram = task.memory ? ram = "--ram ${task.memory}" : "" 
     report = params.skip_report ? "" : "--report"
     """
+    printf -- "- process_name: snippy\\n"                                                           >> ${sample_id}_snippy_provenance.yml
+    printf -- "  tools:\\n"                                                                         >> ${sample_id}_snippy_provenance.yml
+    printf -- "    - tool_name: snippy\\n"                                                          >> ${sample_id}_snippy_provenance.yml
+    printf -- "      tool_version: \$(snippy --version | awk '{print \$2}')\\n"                     >> ${sample_id}_snippy_provenance.yml
+    printf -- "      parameters:\\n"                                                                >> ${sample_id}_snippy_provenance.yml
+    printf -- "        - parameter: --mincov\\n"                                                    >> ${sample_id}_snippy_provenance.yml
+    printf -- "          value: ${params.mincov}\\n"                                                >> ${sample_id}_snippy_provenance.yml
+    printf -- "        - parameter: --basequal\\n"                                                  >> ${sample_id}_snippy_provenance.yml
+    printf -- "          value: ${params.basequal}\\n"                                              >> ${sample_id}_snippy_provenance.yml
+    printf -- "        - parameter: --mapqual\\n"                                                   >> ${sample_id}_snippy_provenance.yml
+    printf -- "          value: ${params.mapqual}\\n"                                               >> ${sample_id}_snippy_provenance.yml
+    printf -- "        - parameter: --minfrac\\n"                                                   >> ${sample_id}_snippy_provenance.yml
+    printf -- "          value: ${params.minfrac}\\n"                                               >> ${sample_id}_snippy_provenance.yml
+    printf -- "        - parameter: --ref\\n"                                                       >> ${sample_id}_snippy_provenance.yml
+    printf -- "          value: ${ref}\\n"                                                          >> ${sample_id}_snippy_provenance.yml
+    printf -- "        - parameter: --R1\\n"                                                        >> ${sample_id}_snippy_provenance.yml
+    printf -- "          value: ${reads_1}\\n"                                                      >> ${sample_id}_snippy_provenance.yml
+    printf -- "        - parameter: --R2\\n"                                                        >> ${sample_id}_snippy_provenance.yml
+    printf -- "          value: ${reads_2}\\n"                                                      >> ${sample_id}_snippy_provenance.yml
+
+
     mkdir tmp
 
     snippy \
@@ -79,9 +107,16 @@ process samtools_stats_summary {
 
     output:
     path("${sample_id}_samtools_stats_summary.txt")
+    tuple val(sample_id), path("${sample_id}_samtools_stats_summary_provenance.yml"), emit: provenance
     
     script:
     """
+    printf -- "- process_name: samtools_stats_summary\\n"              >> ${sample_id}_samtools_stats_summary_provenance.yml
+    printf -- "  tools:\\n"                             >> ${sample_id}_samtools_stats_summary_provenance.yml
+    printf -- "    - tool_name: samtools\\n"            >> ${sample_id}_samtools_stats_summary_provenance.yml
+    printf -- "      tool_version: \$(samtools --version 2>&1 | awk 'NR==1 {print \$2}')\\n" >> ${sample_id}_samtools_stats_summary_provenance.yml
+    printf -- "      subcommand: stats\\n"            >> ${sample_id}_samtools_stats_summary_provenance.yml
+
     samtools stats ${alignment} | grep ^SN | cut -f 2- > ${sample_id}_samtools_stats_summary.txt
     """
 }
@@ -98,9 +133,19 @@ process qualimap_bamqc {
     output:
     tuple val(sample_id), path("${sample_id}_qualimap_bamqc_genome_results.csv"), emit: genome_results_csv
     tuple val(sample_id), path("${sample_id}_bamqc"),                             emit: qualimap_bamqc_dir
+    tuple val(sample_id), path("${sample_id}_qualimap_bamqc_provenance.yml"), emit: provenance
     
     script:
     """
+    printf -- "- process_name: qualimap\\n"          >> ${sample_id}_qualimap_bamqc_provenance.yml
+    printf -- "  tools:\\n"                          >> ${sample_id}_qualimap_bamqc_provenance.yml
+    printf -- "    - tool_name: qualimap\\n"         >> ${sample_id}_qualimap_bamqc_provenance.yml
+    printf -- "      tool_version: \$(qualimap --version 2>&1 | grep "QualiMap" | awk '{print \$2}')\\n" >> ${sample_id}_qualimap_bamqc_provenance.yml
+    printf -- "      subcommand: bamqc\\n"           >> ${sample_id}_qualimap_bamqc_provenance.yml
+    printf -- "      parameters:\\n"                 >> ${sample_id}_qualimap_bamqc_provenance.yml
+    printf -- "        - parameter: --bam\\n"        >> ${sample_id}_qualimap_bamqc_provenance.yml
+    printf -- "          value: ${alignment[0]}\\n"  >> ${sample_id}_qualimap_bamqc_provenance.yml
+
     qualimap bamqc -bam ${alignment} --outdir ${sample_id}_bamqc
     qualimap_bamqc_genome_results_to_csv.py -s ${sample_id} ${sample_id}_bamqc/genome_results.txt > ${sample_id}_qualimap_bamqc_genome_results.csv
     """
