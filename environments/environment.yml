@@ -9,3 +9,4 @@ dependencies:
   - fastp=0.20.1
   - qualimap=2.2.2d
   - snpEff=5.1
+  - samtools=1.20
