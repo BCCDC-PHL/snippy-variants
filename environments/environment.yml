@@ -8,6 +8,6 @@ dependencies:
   - snippy=4.6.0
   - fastp=0.20.1
   - qualimap=2.2.2d
-  - snpEff=5.2
-  - samtools <=1.20
+  - snpEff=5.1
+  - samtools=1.21
   - bc
