@@ -8,4 +8,3 @@ dependencies:
   - snippy=4.6.0
   - fastp=0.20.1
   - qualimap=2.2.2d
-  
